@@ -1,31 +1,57 @@
-function websocketStart() {
-    const ws = require('ws')
+const {userJoin, getRoomUsers, reverseRoomId, getCurrentUser, getIdFromRoom, getUsers, setUsers} = require("./helpers/chat/usersChat");
 
-    const wss = new ws.Server({
-        port: process.env.PORTWebSocket
-    }, () => { console.log(`Server WS start ws : ${process.env.PORTWebSocket}`) })
+function websocketStart(server) {
+    const { Server } = require("socket.io");
+    const io = new Server(server, {
+        cors: {
+            origin: "http://localhost:3000",
+            credentials: true
+        },
+        allowEIO3: true
+    });
 
+    io.on('connection', (socket) => {
 
-    wss.on('connection', function connection(ws) {
-        ws.on('message', function (message) {
-            message = JSON.parse(message)
-
-            switch (message.event) {
-                case 'message':
-                    broadCastMessage(message)
-                    break;
-                case 'connection':
-                    broadCastMessage(message)
-                    break;
-            }
+        socket.on('setChatUsers', ({chatUsers}) => {
+            setUsers([])
+            chatUsers.forEach(chatUser => {
+                userJoin(chatUser.id, chatUser.name || chatUser.email, chatUser.room, socket.id)
+            })
+            socket.emit('setChatUsers', getUsers());
         })
-    })
 
-    function broadCastMessage(message){
-        wss.clients.forEach(client => {
-            client.send(JSON.stringify(message))
-        })
-    }
+        socket.on("joinRoom", ({ userName, userId, room }) => {
+            const user = userJoin(userId, userName, room, socket.id);
+
+            socket.join(user.room);
+
+            io.to(user.room).emit('roomUsers', {
+                room: user.room,
+                users: getRoomUsers(user.room)
+            });
+            io.to(reverseRoomId(user.room)).emit('roomUsers', {
+                room: reverseRoomId(user.room),
+                users: getRoomUsers(user.room)
+            });
+        });
+
+        socket.on('message', (message) => {
+            const user = getCurrentUser(message.userId);
+
+            const friendId = getIdFromRoom(user.room, 'last')
+            const friend = getCurrentUser(friendId)
+
+            io.to(user.room).emit('message', message);
+            io.to(reverseRoomId(user.room)).emit('message', message);
+
+            io.to(friend.socketId).emit('notification', `you have new message, from ${user.name}`);
+        });
+    });
+
+    server.listen(5555, () => {
+        console.log('listening on *:5555');
+    });
+
 }
 
 module.exports = websocketStart

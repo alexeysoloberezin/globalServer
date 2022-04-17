@@ -53,7 +53,6 @@ class UserController {
     async getAll(req, res) {
         const {id} = req.user
 
-
         const users = await User.findAll({
             where: {
                 id: {[Op.ne]: id}
@@ -77,17 +76,15 @@ class UserController {
     }
 
     async getInfo(req, res, next) {
-        const {userId} = req.query
         const {id} = req.user
         let user = null
 
-        if (userId) {
-            user = await User.findOne({where: {userId}, attributes: {exclude: ['password']}})
+        if (req.query.id) {
+            user = await User.findOne({where: {id: req.query.id}, attributes: {exclude: ['password']}})
         } else {
             if (!id) return next(ApiError.internal('Id is required'))
             user = await User.findOne({where: {id}, attributes: {exclude: ['password']}})
         }
-
         return res.json(user)
     }
 }

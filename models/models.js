@@ -18,6 +18,12 @@ const Friends = sequelize.define('friends', {
     friend_id: {type: DataTypes.INTEGER, allowNull: false}
 })
 
+const Messages = sequelize.define('messages', {
+    id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
+    room: {type: DataTypes.STRING, allowNull: false },
+    message: {type: DataTypes.STRING, allowNull: false}
+})
+
 const Basket = sequelize.define('basket', {
     id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
 })
@@ -67,6 +73,9 @@ Friends.belongsTo(User, {
     foreignKey: 'friend_id'
 })
 
+User.hasMany(Messages)
+Messages.belongsTo(User)
+
 User.hasMany(Rating)
 Rating.belongsTo(User)
 
@@ -101,6 +110,7 @@ module.exports = {
     Type,
     Brand,
     Rating,
+    Messages,
     DeviceInfo,
     TypeBrand,
     Friends,
